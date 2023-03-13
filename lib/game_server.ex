@@ -1,41 +1,45 @@
 defmodule GameServer do
   use GenServer
 
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  alias GameEngine.Board
+
+  @server :"minodo@bt"
+
+  def start_link() do
+    GenServer.start_link(__MODULE__, Board.new(), name: __MODULE__)
   end
 
-  def push(element) do
-    GenServer.cast({__MODULE__, :"minodo@nettos-MacBook-Pro"}, {:push, element})
+  def push(coordinate) do
+    GenServer.cast({__MODULE__, @server}, {:push, coordinate})
   end
 
-  def pop() do
-    GenServer.call({__MODULE__, :"minodo@nettos-MacBook-Pro"}, :pop)
-  end
+  # def pop() do
+  #   GenServer.call({__MODULE__, @server}, :pop)
+  # end
 
   def view() do
-    GenServer.call({__MODULE__, :"minodo@nettos-MacBook-Pro"}, :view)
+    GenServer.call({__MODULE__, @server}, :view)
   end
 
   # Server (callbacks)
 
   @impl true
-  def init(stack) do
-    {:ok, stack}
+  def init(board) do
+    {:ok, board}
+  end
+
+  # @impl true
+  # def handle_call(:pop, _from, [head | tail]) do
+  #   {:reply, head, tail}
+  # end
+
+  @impl true
+  def handle_call(:view, _from, board) do
+    {:reply, board, board}
   end
 
   @impl true
-  def handle_call(:pop, _from, [head | tail]) do
-    {:reply, head, tail}
-  end
-
-  @impl true
-  def handle_call(:view, _from, state) do
-    {:reply, state, state}
-  end
-
-  @impl true
-  def handle_cast({:push, element}, state) do
+  def handle_cast({:push, coordinate}, board) do
     ## config :livebook, LivebookWeb.Endpoint,
     ## url: [host: "localhost", path: "/"],
     ## pubsub_server: Livebook.PubSub,
@@ -44,10 +48,10 @@ defmodule GameServer do
     Phoenix.PubSub.broadcast!(
       Livebook.PubSub,
       "game",
-      {:msg, "new element: #{inspect(element)}"}
+      {:msg, "new element: #{inspect(coordinate)}"}
     )
 
-    {:noreply, [element | state]}
+    {:noreply, Board.position_player(board, coordinate, "some_player")}
   end
 end
 

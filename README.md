@@ -19,3 +19,13 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/game_server>.
 
+
+
+```
+Mix.install([
+  :phoenix,
+  {:game_server, path: "../game_server"}
+])
+
+iex --sname minodo -S mix phx.server
+```
