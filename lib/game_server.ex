@@ -10,15 +10,27 @@ defmodule GameServer do
   end
 
   def register(name) do
-    GenServer.cast({__MODULE__, @server}, {:register, name, self()})
+    GenServer.cast({__MODULE__, @server}, {:register, name, self(), Node.self()})
+  end
+
+  def unregister() do
+    GenServer.cast({__MODULE__, @server}, {:unregister, Node.self()})
   end
 
   def move(target) do
-    GenServer.cast({__MODULE__, @server}, {:move, target, self()})
+    GenServer.cast({__MODULE__, @server}, {:move, target, Node.self()})
+  end
+
+  def change_color do
+    GenServer.cast({__MODULE__, @server}, {:change_color, Node.self()})
+  end
+
+  def reset do
+    GenServer.cast({__MODULE__, @server}, :reset)
   end
 
   def stop do
-    GenServer.cast({__MODULE__, @server}, {:stop, self()})
+    GenServer.cast({__MODULE__, @server}, {:stop, Node.self()})
   end
 
   def add_fruits(count) do
@@ -58,23 +70,38 @@ defmodule GameServer do
   end
 
   @impl true
-  def handle_cast({:register, name, pid}, board) do
-    {:noreply, Board.register(board, Player.new(name, pid))}
+  def handle_cast({:register, name, pid, node}, board) do
+    {:noreply, Board.register(board, node, Player.new(cut_name(name), pid))}
   end
 
   @impl true
-  def handle_cast({:move, target, pid}, board) do
-    {:noreply, Board.move(board, pid, target)}
+  def handle_cast({:unregister, node}, board) do
+    {:noreply, Board.unregister(board, node)}
   end
 
   @impl true
-  def handle_cast({:stop, pid}, board) do
-    {:noreply, Board.stop(board, pid)}
+  def handle_cast({:move, target, node}, board) do
+    {:noreply, Board.move(board, node, target)}
+  end
+
+  @impl true
+  def handle_cast({:change_color, node}, board) do
+    {:noreply, Board.change_color(board, node)}
+  end
+
+  @impl true
+  def handle_cast({:stop, node}, board) do
+    {:noreply, Board.stop(board, node)}
   end
 
   @impl true
   def handle_cast({:add_fruits, count}, board) do
     {:noreply, Board.add_fruits(board, count)}
+  end
+
+  @impl true
+  def handle_cast(:reset, _board) do
+    {:noreply, Board.new()}
   end
 
   @impl true
@@ -111,10 +138,15 @@ defmodule GameServer do
   end
 
   defp send_player_messages(%{players: players, fruits: fruits}) do
-    Enum.each(players, fn {pid, player} ->
-      send(pid, {:board_tick, player, fruits})
+    Enum.each(players, fn {_node, player} ->
+      send(player.pid, {:board_tick, player, fruits})
     end)
   end
+
+
+  defp cut_name(name) when is_number(name), do: cut_name(Integer.to_string(name))
+  defp cut_name(name) when is_atom(name), do: cut_name(Atom.to_string(name))
+  defp cut_name(name), do: String.slice(name, 0..2)
 end
 
 # GenServer.cast(Game.GameServer, {:push, "AQUI!"})

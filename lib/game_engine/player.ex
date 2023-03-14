@@ -5,6 +5,14 @@ defmodule GameEngine.Player do
   @board_width Board.width()
   @board_height Board.height()
 
+  @player_colors [
+    "#a5d5ff", #blue
+    "#a5ffaa", #green
+    "#ffa5a5", #pink
+    "#a8a5ff", #purple
+    "#ffa5a5", #red
+  ]
+
   def new(name, pid), do: %{
     name: name,
     pid: pid,
@@ -12,9 +20,12 @@ defmodule GameEngine.Player do
     status: :idle,
     target: nil,
     score: 0,
-    velocity: 2
+    velocity: 2,
+    size: 16,
+    color: random_color()
   }
 
+  def random_color, do: Enum.random(@player_colors)
 
   def move_player(%{target: nil} = player), do: player
 
