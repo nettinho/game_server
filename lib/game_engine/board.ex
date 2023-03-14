@@ -1,7 +1,7 @@
 defmodule GameEngine.Board do
   alias GameEngine.Player
 
-  @width 750
+  @width 1250
   @height 750
   @fruit_min_size 5
   @fruit_max_size 25

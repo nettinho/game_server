@@ -142,8 +142,8 @@ defmodule GameServer do
   end
 
   defp send_player_messages(%{players: players, fruits: fruits}) do
-    Enum.each(players, fn {_node, player} ->
-      send(player.pid, {:board_tick, player, players, fruits})
+    Enum.each(players, fn {node, player} ->
+      send(player.pid, {:board_tick, player, Map.drop(players, [node]), fruits})
     end)
   end
 
