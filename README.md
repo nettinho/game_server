@@ -24,6 +24,7 @@ be found at <https://hexdocs.pm/game_server>.
 ```
 Mix.install([
   :phoenix,
+  :elixir_math,
   {:game_server, path: "../game_server"}
 ])
 
