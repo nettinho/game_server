@@ -1,6 +1,9 @@
 defmodule GameEngine.Player do
 
-  @velocity 5
+  alias GameEngine.Board
+
+  @board_width Board.width()
+  @board_height Board.height()
 
   def new(name, pid), do: %{
     name: name,
@@ -8,24 +11,37 @@ defmodule GameEngine.Player do
     pos: {250, 250},
     status: :idle,
     target: nil,
-    points: 0
+    score: 0,
+    velocity: 2
   }
 
 
   def move_player(%{target: nil} = player), do: player
 
-  def move_player(%{target: {tx, ty}, pos: {px, py}} = player) do
+  def move_player(%{target: {tx, ty}, pos: {px, py}, velocity: velocity} = player) do
     x = tx - px
     y = ty - py
-    if x * x + y * y <= @velocity * @velocity do
-      %{player | pos: {tx, ty}}
+    if x * x + y * y <= velocity * velocity do
+      %{player | pos: {tx, ty}, status: :moving}
     else
       a = ElixirMath.atan2(y, x)
 
-      dx = ElixirMath.cos(a) * @velocity
-      dy = ElixirMath.sin(a) * @velocity
+      dx = ElixirMath.cos(a) * velocity
+      dy = ElixirMath.sin(a) * velocity
 
-      %{player | pos: {px + dx, py + dy}}
+      %{player | pos: {px + dx, py + dy}, status: :moving}
     end
   end
+
+
+  def check_target(%{target: pos, pos: pos, status: :moving} = player), do: %{player | target: nil, status: :idle}
+  def check_target(player), do: player
+
+  def check_x_borders(%{pos: {x, y}} = player) when x > @board_width, do: %{player | target: nil, status: :idle, pos: {@board_width, y}}
+  def check_x_borders(%{pos: {x, y}} = player) when x < 0, do: %{player | target: nil, status: :idle, pos: {0, y}}
+  def check_x_borders(player), do: player
+
+  def check_y_borders(%{pos: {x, y}} = player) when y > @board_height, do: %{player | target: nil, status: :idle, pos: {x, @board_height}}
+  def check_y_borders(%{pos: {x, y}} = player) when y < 0, do: %{player | target: nil, status: :idle, pos: {x, 0}}
+  def check_y_borders(player), do: player
 end

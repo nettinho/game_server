@@ -17,6 +17,14 @@ defmodule GameServer do
     GenServer.cast({__MODULE__, @server}, {:move, target, self()})
   end
 
+  def stop do
+    GenServer.cast({__MODULE__, @server}, {:stop, self()})
+  end
+
+  def add_fruits(count) do
+    GenServer.cast({__MODULE__, @server}, {:add_fruits, count})
+  end
+
   def push(coordinate) do
     with {:ok, validated_coordinate} <- Coordinates.validate_coordinate(coordinate) do
       GenServer.cast({__MODULE__, @server}, {:push, validated_coordinate})
@@ -60,6 +68,16 @@ defmodule GameServer do
   end
 
   @impl true
+  def handle_cast({:stop, pid}, board) do
+    {:noreply, Board.stop(board, pid)}
+  end
+
+  @impl true
+  def handle_cast({:add_fruits, count}, board) do
+    {:noreply, Board.add_fruits(board, count)}
+  end
+
+  @impl true
   def handle_cast({:push, coordinate}, board) do
     ## config :livebook, LivebookWeb.Endpoint,
     ## url: [host: "localhost", path: "/"],
@@ -80,11 +98,9 @@ defmodule GameServer do
     board = board
     |> Board.move_players()
     |> Board.eat_fruits()
-    |> Board.check_idles()
-    #send each player board
+    |> Board.check_state()
 
-
-
+    send_player_messages(board)
 
     Phoenix.PubSub.broadcast!(
       Livebook.PubSub,
@@ -92,6 +108,12 @@ defmodule GameServer do
       {:board_tick, board}
     )
     {:noreply, board}
+  end
+
+  defp send_player_messages(%{players: players, fruits: fruits}) do
+    Enum.each(players, fn {pid, player} ->
+      send(pid, {:board_tick, player, fruits})
+    end)
   end
 end
 
