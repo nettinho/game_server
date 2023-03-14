@@ -126,6 +126,7 @@ defmodule GameServer do
     |> Board.move_players()
     |> Board.eat_fruits()
     |> Board.check_state()
+    |> Board.maybe_generate_fruit()
 
     send_player_messages(board)
 

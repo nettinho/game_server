@@ -5,6 +5,8 @@ defmodule GameEngine.Player do
   @board_width Board.width()
   @board_height Board.height()
 
+  @powered_velocity_bonus 0.02
+
   @player_colors [
     "#a5d5ff", #blue
     "#a5ffaa", #green
@@ -22,14 +24,17 @@ defmodule GameEngine.Player do
     score: 0,
     velocity: 2,
     size: 16,
-    color: random_color()
+    color: random_color(),
+    powered: 0
   }
 
   def random_color, do: Enum.random(@player_colors)
 
   def move_player(%{target: nil} = player), do: player
 
-  def move_player(%{target: {tx, ty}, pos: {px, py}, velocity: velocity} = player) do
+  def move_player(%{target: {tx, ty}, pos: {px, py}, velocity: cur_velocity, powered: powered} = player) do
+    velocity = cur_velocity + powered * @powered_velocity_bonus
+
     x = tx - px
     y = ty - py
     if x * x + y * y <= velocity * velocity do
@@ -55,4 +60,7 @@ defmodule GameEngine.Player do
   def check_y_borders(%{pos: {x, y}} = player) when y > @board_height, do: %{player | target: nil, status: :idle, pos: {x, @board_height}}
   def check_y_borders(%{pos: {x, y}} = player) when y < 0, do: %{player | target: nil, status: :idle, pos: {x, 0}}
   def check_y_borders(player), do: player
+
+  def decrease_power_up(%{powered: powered} = player) when powered > 0, do: %{player | powered: powered - 1}
+  def decrease_power_up(player), do: %{player | powered: 0}
 end
