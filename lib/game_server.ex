@@ -3,7 +3,7 @@ defmodule GameServer do
 
   alias GameEngine.{Board, Coordinates, Player}
 
-  @server :"minodo@bt"
+  @server :minodo@bt
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, Board.new(), name: __MODULE__)
@@ -122,11 +122,13 @@ defmodule GameServer do
 
   @impl true
   def handle_info(:tick, board) do
-    board = board
-    |> Board.move_players()
-    |> Board.eat_fruits()
-    |> Board.check_state()
-    |> Board.maybe_generate_fruit()
+    board =
+      board
+      |> Board.move_players()
+      |> Board.eat_fruits()
+      |> Board.check_state()
+      |> Board.players_fight()
+      |> Board.maybe_generate_fruit()
 
     send_player_messages(board)
 
@@ -135,15 +137,15 @@ defmodule GameServer do
       "board_tick",
       {:board_tick, board}
     )
+
     {:noreply, board}
   end
 
   defp send_player_messages(%{players: players, fruits: fruits}) do
     Enum.each(players, fn {_node, player} ->
-      send(player.pid, {:board_tick, player, fruits})
+      send(player.pid, {:board_tick, player, players, fruits})
     end)
   end
-
 
   defp cut_name(name) when is_number(name), do: cut_name(Integer.to_string(name))
   defp cut_name(name) when is_atom(name), do: cut_name(Atom.to_string(name))
