@@ -3,7 +3,9 @@ defmodule GameUtils do
 
   def closest_fruit(_player, fruits) when fruits == %{}, do: nil
 
-  def closest_fruit(%{pos: ppos} = _player, fruits) do
+  def closest_fruit(%{pos: ppos} = player, fruits) do
+    IO.inspect(player, label: "closest_fruit")
+
     fruits
     |> Enum.map(fn {fpos, _} -> {fpos, distance(ppos, fpos)} end)
     |> Enum.min_by(fn {_pos, dist} -> dist end)

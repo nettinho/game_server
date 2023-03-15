@@ -125,29 +125,39 @@ defmodule LocalGameServer do
 
     send_player_messages(board)
 
-    case board.settings do
-      %{success_func: nil} ->
-        nil
+    success_result =
+      case board.settings do
+        %{success_func: nil} ->
+          :ok
 
-      %{success_func: success_func} ->
-        if success_func.(board) do
-          send(pid, {:success, board})
-        end
+        %{success_func: success_func} ->
+          if success_func.(board) do
+            send(pid, {:success, board})
+            {:stop, :normal, nil}
+          else
+            :ok
+          end
+      end
+
+    failure_result =
+      case board.settings do
+        %{failure_func: nil} ->
+          :ok
+
+        %{failure_func: failure_func} ->
+          if failure_func.(board) do
+            send(pid, {:failure, board})
+          else
+            :ok
+          end
+      end
+
+    with :ok <- success_result,
+         :ok <- failure_result do
+      send(pid, {:board_tick, board})
+
+      {:noreply, {pid, board}}
     end
-
-    case board.settings do
-      %{failure_func: nil} ->
-        nil
-
-      %{failure_func: failure_func} ->
-        if failure_func.(board) do
-          send(pid, {:failure, board})
-        end
-    end
-
-    send(pid, {:board_tick, board})
-
-    {:noreply, {pid, board}}
   end
 
   defp send_player_messages(%{players: players, fruits: fruits}) do
