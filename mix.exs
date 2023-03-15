@@ -21,6 +21,7 @@ defmodule GameServer.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:kino, "~> 0.8.0"},
       {:phoenix, "~> 1.7.1"},
       {:elixir_math, "~> 0.1.0"}
       # {:dep_from_hexpm, "~> 0.3.0"},

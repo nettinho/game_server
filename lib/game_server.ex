@@ -3,7 +3,7 @@ defmodule GameServer do
 
   alias GameEngine.{Board, Coordinates, Player}
 
-  @server :minodo@bt
+  @server :"minodo@nettos-MacBook-Pro"
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, Board.new(), name: __MODULE__)
@@ -70,8 +70,8 @@ defmodule GameServer do
   end
 
   @impl true
-  def handle_cast({:register, name, pid, node}, board) do
-    {:noreply, Board.register(board, node, Player.new(cut_name(name), pid))}
+  def handle_cast({:register, name, pid, node}, %{settings: settings} = board) do
+    {:noreply, Board.register(board, node, Player.new(cut_name(name), pid, settings))}
   end
 
   @impl true

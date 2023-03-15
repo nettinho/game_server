@@ -1,48 +1,74 @@
 defmodule GameEngine.Board do
   alias GameEngine.Player
 
-  @width 1250
-  @height 750
-  @fruit_min_size 5
-  @fruit_max_size 25
-  @powered_ticks_per_fruit_size 5
+  @board_default_settings %{
+    width: 1250,
+    height: 750,
+    fruit_min_size: 5,
+    fruit_max_size: 25,
+    powered_ticks_per_fruit_size: 5,
+    fruit_type_distribution: [
+      {:default, 4},
+      {:power_up, 1}
+    ],
+    fruit_generated_probability: 10,
+    max_powered: 250,
+    base_player_velocity: 2,
+    base_player_size: 16,
+    fleeing_ticks: 25,
+    digesting_ticks: 25,
+    powered_velocity_bonus: 0.02,
+    player_colors: [
+      # blue
+      "#a5d5ff",
+      # green
+      "#a5ffaa",
+      # pink
+      "#ffa5a5",
+      # purple
+      "#a8a5ff",
+      # red
+      "#ffa5a5"
+    ],
+    player_inital_x: 625,
+    player_inital_y: 325,
+    initial_fruits: 10,
+    initial_fruit: nil
+  }
 
-  @fruit_type_distribution [
-    {:default, 4},
-    {:power_up, 1}
-  ]
+  def new(settings \\ %{}) do
+    settings = Map.merge(@board_default_settings, settings)
 
-  @fruit_generated_probability 10
-
-  @max_powered 250
-
-  @base_player_velocity 2
-  @base_player_size 16
-
-  @fleeing_ticks 25
-  @digesting_ticks 25
-
-  def new(),
-    do: %{
+    %{
       players: %{},
-      fruits: Map.new(for _ <- 1..10, do: random_fruit())
+      fruits: initial_fruits(settings),
+      settings: settings
     }
+  end
 
-  def width, do: @width
-  def height, do: @height
+  defp initial_fruits(%{initial_fruit: {x, y, size}}), do: %{{x, y} => {size, :default}}
 
-  def random_pos, do: {:rand.uniform(@width), :rand.uniform(@height)}
-  def random_fruit_size, do: :rand.uniform(@fruit_max_size - @fruit_min_size) + @fruit_min_size
+  defp initial_fruits(%{initial_fruits: initial_fruits} = settings) when initial_fruits > 0,
+    do: Map.new(for _ <- 1..initial_fruits, do: random_fruit(settings))
 
-  def random_fruit_type,
+  defp initial_fruits(_), do: %{}
+
+  def random_pos(%{width: width, height: height}),
+    do: {:rand.uniform(width), :rand.uniform(height)}
+
+  def random_fruit_size(%{fruit_max_size: fruit_max_size, fruit_min_size: fruit_min_size}),
+    do: :rand.uniform(fruit_max_size - fruit_min_size) + fruit_min_size
+
+  def random_fruit_type(%{fruit_type_distribution: fruit_type_distribution}),
     do:
-      @fruit_type_distribution
+      fruit_type_distribution
       |> Enum.flat_map(fn {type, qty} ->
         for _ <- 1..qty, do: type
       end)
       |> Enum.random()
 
-  def random_fruit, do: {random_pos(), {random_fruit_size(), random_fruit_type()}}
+  def random_fruit(settings),
+    do: {random_pos(settings), {random_fruit_size(settings), random_fruit_type(settings)}}
 
   def register(%{players: players} = board, node, player) do
     case Map.get(players, node) do
@@ -69,10 +95,13 @@ defmodule GameEngine.Board do
     end
   end
 
-  def change_color(%{players: players} = board, node) do
+  def change_color(%{players: players, settings: settings} = board, node) do
     case Map.get(board.players, node) do
-      nil -> board
-      player -> %{board | players: %{players | node => %{player | color: Player.random_color()}}}
+      nil ->
+        board
+
+      player ->
+        %{board | players: %{players | node => %{player | color: Player.random_color(settings)}}}
     end
   end
 
@@ -83,22 +112,29 @@ defmodule GameEngine.Board do
     end
   end
 
-  def add_fruits(%{fruits: fruits} = board, count) do
-    new_fruits = Map.new(for _ <- 1..count, do: random_fruit())
+  def add_fruits(%{fruits: fruits, settings: settings} = board, count) do
+    new_fruits = Map.new(for _ <- 1..count, do: random_fruit(settings))
     %{board | fruits: Map.merge(fruits, new_fruits)}
   end
 
-  def move_players(board) do
+  def move_players(%{settings: settings} = board) do
     players =
       board
       |> Map.get(:players)
-      |> Enum.map(fn {node, player} -> {node, Player.move_player(player)} end)
+      |> Enum.map(fn {node, player} -> {node, Player.move_player(player, settings)} end)
       |> Map.new()
 
     %{board | players: players}
   end
 
-  def eat_fruits(board) do
+  def eat_fruits(%{settings: settings} = board) do
+    %{
+      powered_ticks_per_fruit_size: powered_ticks_per_fruit_size,
+      base_player_velocity: base_player_velocity,
+      base_player_size: base_player_size,
+      max_powered: max_powered
+    } = settings
+
     {players, fruits} =
       board
       |> Map.get(:players)
@@ -123,7 +159,7 @@ defmodule GameEngine.Board do
           powered_gain =
             touching_fruits
             |> Enum.filter(fn {_, {_, type}} -> type == :power_up end)
-            |> Enum.map(fn {_, {size, _}} -> size * @powered_ticks_per_fruit_size end)
+            |> Enum.map(fn {_, {size, _}} -> size * powered_ticks_per_fruit_size end)
             |> Enum.sum()
 
           fruits_to_drop = Enum.map(touching_fruits, fn {pos, _} -> pos end)
@@ -131,9 +167,9 @@ defmodule GameEngine.Board do
           new_player = %{
             player
             | score: new_score,
-              velocity: ElixirMath.log10(new_score + 10) * @base_player_velocity,
-              size: ElixirMath.log10(new_score + 10) * @base_player_size,
-              powered: Enum.min([powered + powered_gain, @max_powered])
+              velocity: ElixirMath.log10(new_score + 10) * base_player_velocity,
+              size: ElixirMath.log10(new_score + 10) * base_player_size,
+              powered: Enum.min([powered + powered_gain, max_powered])
           }
 
           {
@@ -146,7 +182,7 @@ defmodule GameEngine.Board do
     %{board | fruits: fruits, players: players}
   end
 
-  def players_fight(%{players: players} = board) do
+  def players_fight(%{players: players, settings: settings} = board) do
     new_players =
       players
       |> Enum.reduce(%{}, fn {node, %{pos: {px, py}, size: psize}} = player, calculated_players ->
@@ -162,7 +198,7 @@ defmodule GameEngine.Board do
             y = abs(ty - py)
             ElixirMath.sqrt(x * x + y * y) <= tsize / 2 + psize / 2
           end)
-          |> try_battle(player)
+          |> try_battle(player, settings)
           |> Map.merge(calculated_players)
         end
       end)
@@ -170,23 +206,25 @@ defmodule GameEngine.Board do
     %{board | players: new_players}
   end
 
-  defp try_battle(nil, {node, player}), do: %{node => player}
+  defp try_battle(nil, {node, player}, _), do: %{node => player}
 
   defp try_battle(
          {_, %{powered: p_l_powered}} = p_l,
-         {_, %{powered: p_w_powered}} = p_w
+         {_, %{powered: p_w_powered}} = p_w,
+         settings
        )
        when p_l_powered == 0 and p_w_powered > 0,
-       do: do_battle(p_l, p_w)
+       do: do_battle(p_l, p_w, settings)
 
   defp try_battle(
          {_, %{powered: p_w_powered}} = p_w,
-         {_, %{powered: p_l_powered}} = p_l
+         {_, %{powered: p_l_powered}} = p_l,
+         settings
        )
        when p_l_powered == 0 and p_w_powered > 0,
-       do: do_battle(p_l, p_w)
+       do: do_battle(p_l, p_w, settings)
 
-  defp try_battle({p1_node, p1}, {p2_node, p2}) do
+  defp try_battle({p1_node, p1}, {p2_node, p2}, _) do
     %{
       p1_node => p1,
       p2_node => p2
@@ -195,25 +233,31 @@ defmodule GameEngine.Board do
 
   defp do_battle(
          {p_l_node, %{pos: {plx, ply}, score: p_l_score} = p_l},
-         {p_w_node, %{pos: {pwx, pwy}, score: p_w_score} = p_w}
+         {p_w_node, %{pos: {pwx, pwy}, score: p_w_score} = p_w},
+         %{
+           width: width,
+           height: height,
+           fleeing_ticks: fleeing_ticks,
+           digesting_ticks: digesting_ticks
+         }
        ) do
     steal_amount = round(p_l_score / 2)
 
-    flee_x = if plx < pwx, do: 0, else: @width
-    flee_y = if ply < pwy, do: 0, else: @height
+    flee_x = if plx < pwx, do: 0, else: width
+    flee_y = if ply < pwy, do: 0, else: height
 
     %{
       p_l_node => %{
         p_l
         | status: :fleeing,
-          status_timer: @fleeing_ticks,
+          status_timer: fleeing_ticks,
           target: {flee_x, flee_y},
           score: p_l_score - steal_amount
       },
       p_w_node => %{
         p_w
         | status: :digesting,
-          status_timer: @digesting_ticks,
+          status_timer: digesting_ticks,
           score: p_w_score + steal_amount
       }
     }
@@ -221,25 +265,29 @@ defmodule GameEngine.Board do
 
   def maybe_generate_fruit(board), do: try_fruit_generation(board, :rand.uniform(100))
 
-  defp try_fruit_generation(board, num) when num < @fruit_generated_probability,
-    do: add_fruits(board, 1)
+  defp try_fruit_generation(
+         %{settings: %{fruit_generated_probability: fruit_generated_probability}} = board,
+         num
+       )
+       when num < fruit_generated_probability,
+       do: add_fruits(board, 1)
 
   defp try_fruit_generation(board, _), do: board
 
-  def check_state(board) do
+  def check_state(%{settings: settings} = board) do
     checks = [
-      &Player.check_target/1,
-      &Player.check_x_borders/1,
-      &Player.check_y_borders/1,
-      &Player.decrease_power_up/1,
-      &Player.decrease_status_timer/1
+      &Player.check_target/2,
+      &Player.check_x_borders/2,
+      &Player.check_y_borders/2,
+      &Player.decrease_power_up/2,
+      &Player.decrease_status_timer/2
     ]
 
     players =
       board
       |> Map.get(:players)
       |> Enum.map(fn {pid, player} ->
-        {pid, Enum.reduce(checks, player, fn fun, p -> fun.(p) end)}
+        {pid, Enum.reduce(checks, player, fn fun, p -> fun.(p, settings) end)}
       end)
       |> Map.new()
 

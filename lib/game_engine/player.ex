@@ -1,49 +1,35 @@
 defmodule GameEngine.Player do
-  alias GameEngine.Board
+  def new(
+        name,
+        pid,
+        %{player_inital_x: player_inital_x, player_inital_y: player_inital_y} = settings
+      ),
+      do: %{
+        name: name,
+        pid: pid,
+        pos: {player_inital_x, player_inital_y},
+        status: :idle,
+        status_timer: 0,
+        target: nil,
+        score: 0,
+        velocity: 2,
+        size: 16,
+        color: random_color(settings),
+        powered: 0
+      }
 
-  @board_width Board.width()
-  @board_height Board.height()
+  def random_color(%{player_colors: player_colors}), do: Enum.random(player_colors)
 
-  @powered_velocity_bonus 0.02
+  def move_player(%{target: nil} = player, _), do: player
+  def move_player(%{status: :digesting} = player, _), do: player
 
-  @player_colors [
-    # blue
-    "#a5d5ff",
-    # green
-    "#a5ffaa",
-    # pink
-    "#ffa5a5",
-    # purple
-    "#a8a5ff",
-    # red
-    "#ffa5a5"
-  ]
-
-  def new(name, pid),
-    do: %{
-      name: name,
-      pid: pid,
-      pos: {250, 250},
-      status: :idle,
-      status_timer: 0,
-      target: nil,
-      score: 0,
-      velocity: 2,
-      size: 16,
-      color: random_color(),
-      powered: 0
-    }
-
-  def random_color, do: Enum.random(@player_colors)
-
-  def move_player(%{target: nil} = player), do: player
-  def move_player(%{status: :digesting} = player), do: player
-
-  def move_player(%{status: :fleeing, velocity: velocity} = player),
+  def move_player(%{status: :fleeing, velocity: velocity} = player, _),
     do: do_move_player(player, velocity * 3, :fleeing)
 
-  def move_player(%{velocity: velocity, powered: powered} = player),
-    do: do_move_player(player, velocity + powered * @powered_velocity_bonus, :moving)
+  def move_player(%{velocity: velocity, powered: powered} = player, %{
+        powered_velocity_bonus: powered_velocity_bonus
+      }),
+      do: do_move_player(player, velocity + powered * powered_velocity_bonus, :moving)
 
   def do_move_player(%{target: {tx, ty}, pos: {px, py}} = player, velocity, status) do
     x = tx - px
@@ -61,37 +47,37 @@ defmodule GameEngine.Player do
     end
   end
 
-  def check_target(%{target: pos, pos: pos, status: :moving} = player),
+  def check_target(%{target: pos, pos: pos, status: :moving} = player, _),
     do: %{player | target: nil, status: :idle}
 
-  def check_target(player), do: player
+  def check_target(player, _), do: player
 
-  def check_x_borders(%{pos: {x, y}} = player) when x > @board_width,
-    do: %{player | target: nil, status: :idle, pos: {@board_width, y}}
+  def check_x_borders(%{pos: {x, y}} = player, %{width: width}) when x > width,
+    do: %{player | target: nil, status: :idle, pos: {width, y}}
 
-  def check_x_borders(%{pos: {x, y}} = player) when x < 0,
+  def check_x_borders(%{pos: {x, y}} = player, _) when x < 0,
     do: %{player | target: nil, status: :idle, pos: {0, y}}
 
-  def check_x_borders(player), do: player
+  def check_x_borders(player, _), do: player
 
-  def check_y_borders(%{pos: {x, y}} = player) when y > @board_height,
-    do: %{player | target: nil, status: :idle, pos: {x, @board_height}}
+  def check_y_borders(%{pos: {x, y}} = player, %{height: height}) when y > height,
+    do: %{player | target: nil, status: :idle, pos: {x, height}}
 
-  def check_y_borders(%{pos: {x, y}} = player) when y < 0,
+  def check_y_borders(%{pos: {x, y}} = player, _) when y < 0,
     do: %{player | target: nil, status: :idle, pos: {x, 0}}
 
-  def check_y_borders(player), do: player
+  def check_y_borders(player, _), do: player
 
-  def decrease_power_up(%{powered: powered} = player) when powered > 0,
+  def decrease_power_up(%{powered: powered} = player, _) when powered > 0,
     do: %{player | powered: powered - 1}
 
-  def decrease_power_up(player), do: %{player | powered: 0}
+  def decrease_power_up(player, _), do: %{player | powered: 0}
 
-  def decrease_status_timer(%{status_timer: 1} = player),
+  def decrease_status_timer(%{status_timer: 1} = player, _),
     do: %{player | status_timer: 0, status: :idle, target: nil}
 
-  def decrease_status_timer(%{status_timer: status_timer} = player) when status_timer > 1,
+  def decrease_status_timer(%{status_timer: status_timer} = player, _) when status_timer > 1,
     do: %{player | status_timer: status_timer - 1}
 
-  def decrease_status_timer(player), do: %{player | status_timer: 0}
+  def decrease_status_timer(player, _), do: %{player | status_timer: 0}
 end
