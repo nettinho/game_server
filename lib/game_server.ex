@@ -3,52 +3,40 @@ defmodule GameServer do
 
   alias GameEngine.{Board, Coordinates, Player}
 
-  @server :"minodo@nettos-MacBook-Pro"
-
   def start_link(_) do
     GenServer.start_link(__MODULE__, Board.new(), name: __MODULE__)
   end
 
-  def register(name) do
-    GenServer.cast({__MODULE__, @server}, {:register, name, self(), Node.self()})
+  def register(server, name) do
+    GenServer.cast({__MODULE__, server}, {:register, name, self(), Node.self()})
   end
 
-  def unregister() do
-    GenServer.cast({__MODULE__, @server}, {:unregister, Node.self()})
+  def unregister(server) do
+    GenServer.cast({__MODULE__, server}, {:unregister, Node.self()})
   end
 
-  def move(target) do
-    GenServer.cast({__MODULE__, @server}, {:move, target, Node.self()})
+  def move(server, target) do
+    GenServer.cast({__MODULE__, server}, {:move, target, Node.self()})
   end
 
-  def change_color do
-    GenServer.cast({__MODULE__, @server}, {:change_color, Node.self()})
+  def change_color(server) do
+    GenServer.cast({__MODULE__, server}, {:change_color, Node.self()})
   end
 
-  def reset do
-    GenServer.cast({__MODULE__, @server}, :reset)
+  def reset(server) do
+    GenServer.cast({__MODULE__, server}, :reset)
   end
 
-  def stop do
-    GenServer.cast({__MODULE__, @server}, {:stop, Node.self()})
+  def stop(server) do
+    GenServer.cast({__MODULE__, server}, {:stop, Node.self()})
   end
 
-  def add_fruits(count) do
-    GenServer.cast({__MODULE__, @server}, {:add_fruits, count})
+  def add_fruits(server, count) do
+    GenServer.cast({__MODULE__, server}, {:add_fruits, count})
   end
 
-  def push(coordinate) do
-    with {:ok, validated_coordinate} <- Coordinates.validate_coordinate(coordinate) do
-      GenServer.cast({__MODULE__, @server}, {:push, validated_coordinate})
-    end
-  end
-
-  # def pop() do
-  #   GenServer.call({__MODULE__, @server}, :pop)
-  # end
-
-  def view() do
-    GenServer.call({__MODULE__, @server}, :view)
+  def view(server) do
+    GenServer.call({__MODULE__, server}, :view)
   end
 
   # Server (callbacks)
@@ -58,11 +46,6 @@ defmodule GameServer do
     :timer.send_interval(50, self(), :tick)
     {:ok, board}
   end
-
-  # @impl true
-  # def handle_call(:pop, _from, [head | tail]) do
-  #   {:reply, head, tail}
-  # end
 
   @impl true
   def handle_call(:view, _from, board) do
@@ -105,22 +88,6 @@ defmodule GameServer do
   end
 
   @impl true
-  def handle_cast({:push, coordinate}, board) do
-    ## config :livebook, LivebookWeb.Endpoint,
-    ## url: [host: "localhost", path: "/"],
-    ## pubsub_server: Livebook.PubSub,
-    # Application.fetch_env!(:livebook, LivebookWeb.Endpoint)[:pubsub_server]
-
-    Phoenix.PubSub.broadcast!(
-      Livebook.PubSub,
-      "game",
-      {:msg, "new element: #{inspect(coordinate)}"}
-    )
-
-    {:noreply, Board.position_player(board, coordinate, "some_player")}
-  end
-
-  @impl true
   def handle_info(:tick, board) do
     board =
       board
@@ -151,5 +118,3 @@ defmodule GameServer do
   defp cut_name(name) when is_atom(name), do: cut_name(Atom.to_string(name))
   defp cut_name(name), do: String.slice(name, 0..2)
 end
-
-# GenServer.cast(Game.GameServer, {:push, "AQUI!"})
