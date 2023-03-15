@@ -67,4 +67,4 @@ defmodule SmartCells.Game2 do
   end
 end
 
-Kino.SmartCell.register(SmartCells.Game1)
+Kino.SmartCell.register(SmartCells.Game2)
