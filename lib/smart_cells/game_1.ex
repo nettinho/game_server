@@ -22,7 +22,7 @@ defmodule SmartCells.Game1 do
   def to_source(_attrs) do
     quote do
       {:ok, server} =
-        LocalGameServer.start_link(%{
+        GameServer.start_link(:local, %{
           initial_fruit: {600, 125, 20},
           fruit_generated_probability: 0,
           success_func: fn %{fruits: fruits} -> Enum.empty?(fruits) end

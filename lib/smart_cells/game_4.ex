@@ -22,7 +22,7 @@ defmodule SmartCells.Game4 do
   def to_source(_attrs) do
     quote do
       {:ok, server} =
-        LocalGameServer.start_link(%{
+        GameServer.start_link(:local, %{
           initial_fruits: [
             {500, 125, 20},
             {300, 125, 20, :power_up}

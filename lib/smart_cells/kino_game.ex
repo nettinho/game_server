@@ -8,7 +8,7 @@ defmodule SmartCells.KinoGame do
 
   @impl true
   def init(pid, ctx) do
-    LocalGameServer.set_pid(pid, self())
+    GameServer.set_local_receiver(pid, self())
     {:ok, assign(ctx, %{})}
   end
 

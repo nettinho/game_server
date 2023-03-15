@@ -37,7 +37,9 @@ defmodule GameEngine.Board do
     initial_fruits: nil,
     initial_enemies: nil,
     success_func: nil,
-    failure_func: nil
+    failure_func: nil,
+    broadcast_pub_sub: true,
+    local_receiver: nil
   }
 
   def new(settings \\ %{}) do
