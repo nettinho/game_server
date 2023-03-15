@@ -2,19 +2,28 @@ defmodule GameEngine.Player do
   def new(
         name,
         pid,
-        %{player_inital_x: player_inital_x, player_inital_y: player_inital_y} = settings
+        %{
+          player_inital_x: player_inital_x,
+          player_inital_y: player_inital_y,
+          base_player_velocity: base_player_velocity,
+          base_player_size: base_player_size
+        } = settings,
+        overrides \\ %{}
       ),
       do: %{
         name: name,
         pid: pid,
-        pos: {player_inital_x, player_inital_y},
+        pos: {
+          Map.get(overrides, :pos_x, player_inital_x),
+          Map.get(overrides, :pos_y, player_inital_y)
+        },
         status: :idle,
         status_timer: 0,
         target: nil,
-        score: 0,
-        velocity: 2,
-        size: 16,
-        color: random_color(settings),
+        score: Map.get(overrides, :score, 0),
+        velocity: Map.get(overrides, :velocity, base_player_velocity),
+        size: Map.get(overrides, :size, base_player_size),
+        color: Map.get(overrides, :color, random_color(settings)),
         powered: 0
       }
 

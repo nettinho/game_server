@@ -6,18 +6,18 @@ defmodule GameEngine.Board do
     height: 750,
     fruit_min_size: 5,
     fruit_max_size: 25,
-    powered_ticks_per_fruit_size: 5,
     fruit_type_distribution: [
       {:default, 4},
       {:power_up, 1}
     ],
     fruit_generated_probability: 10,
+    powered_ticks_per_fruit_size: 5,
     max_powered: 250,
+    powered_velocity_bonus: 0.02,
     base_player_velocity: 2,
     base_player_size: 16,
     fleeing_ticks: 25,
     digesting_ticks: 25,
-    powered_velocity_bonus: 0.02,
     player_colors: [
       # blue
       "#a5d5ff",
@@ -32,23 +32,47 @@ defmodule GameEngine.Board do
     ],
     player_inital_x: 625,
     player_inital_y: 325,
-    initial_fruits: 10,
-    initial_fruit: nil
+    initial_fruits_count: 10,
+    initial_fruit: nil,
+    initial_fruits: nil,
+    initial_enemies: nil,
+    success_func: nil,
+    failure_func: nil
   }
 
   def new(settings \\ %{}) do
     settings = Map.merge(@board_default_settings, settings)
 
     %{
-      players: %{},
+      players: initial_enemies(settings),
       fruits: initial_fruits(settings),
       settings: settings
     }
   end
 
+  defp initial_enemies(%{initial_enemies: [_ | _] = enemies} = settings),
+    do:
+      enemies
+      |> Enum.map(fn
+        {name, override} -> {name, Player.new(name, nil, settings, override)}
+      end)
+      |> Map.new()
+
+  defp initial_enemies(_), do: %{}
+
+  defp initial_fruits(%{initial_fruit: {x, y, size, type}}), do: %{{x, y} => {size, type}}
   defp initial_fruits(%{initial_fruit: {x, y, size}}), do: %{{x, y} => {size, :default}}
 
-  defp initial_fruits(%{initial_fruits: initial_fruits} = settings) when initial_fruits > 0,
+  defp initial_fruits(%{initial_fruits: [_ | _] = fruits}),
+    do:
+      fruits
+      |> Enum.map(fn
+        {x, y, size, type} -> {{x, y}, {size, type}}
+        {x, y, size} -> {{x, y}, {size, :default}}
+      end)
+      |> Map.new()
+
+  defp initial_fruits(%{initial_fruits_count: initial_fruits} = settings) when initial_fruits > 0,
     do: Map.new(for _ <- 1..initial_fruits, do: random_fruit(settings))
 
   defp initial_fruits(_), do: %{}

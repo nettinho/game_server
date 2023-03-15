@@ -61,4 +61,28 @@ defmodule SmartCells.KinoGame do
 
     {:noreply, ctx}
   end
+
+  @impl true
+  def handle_info(
+        {:success, %{settings: %{width: width, height: heigth}}},
+        ctx
+      ) do
+    broadcast_event(ctx, "success", %{
+      settings: %{width: width, height: heigth}
+    })
+
+    {:noreply, ctx}
+  end
+
+  @impl true
+  def handle_info(
+        {:failure, %{settings: %{width: width, height: heigth}}},
+        ctx
+      ) do
+    broadcast_event(ctx, "failure", %{
+      settings: %{width: width, height: heigth}
+    })
+
+    {:noreply, ctx}
+  end
 end

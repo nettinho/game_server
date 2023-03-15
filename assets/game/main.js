@@ -1,6 +1,7 @@
 
 export function init(ctx, assigns) {
   ctx.importCSS("main.css");
+  ctx.importCSS("https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css");
   
   fetch("main.html")
     .then(r => r.text())
@@ -11,9 +12,54 @@ export function init(ctx, assigns) {
 function mount(ctx, html, attrs) {
   ctx.root.innerHTML = html
 
+  let finished = false
 
+  ctx.handleEvent("success", ({settings: {width, height}}) => {
+    finished = true
+    ctx.root.innerHTML = `
+    <div style="
+        width: 100%;
+        background: black;
+        padding: 30px;
+    ">
+      <div style="
+          width: ${width}px;
+          height: ${height}px;
+          border: 1px solid #333;
+          position: relative;
+        "
+        class="flex items-center justify-center"
+      >
+        <span class="text-5xl font-mono text-green-400">¡Victoria!</span>
+      </div>
+    </div>
+    `
+  })
+  ctx.handleEvent("failure", ({settings: {width, height}}) => {
+    finished = true
+    ctx.root.innerHTML = `
+    <div style="
+        width: 100%;
+        background: black;
+        padding: 30px;
+    ">
+      <div style="
+          width: ${width}px;
+          height: ${height}px;
+          border: 1px solid #333;
+          position: relative;
+        "
+        class="flex items-center justify-center"
+      >
+        <span class="text-5xl font-mono text-red-500">¡Derrota!</span>
+      </div>
+    </div>
+    `
+  })
 
   ctx.handleEvent("board_tick", ({fruits, players, settings: {width, height}}) => {
+    if(finished) return
+
     let newHtml = ""
 
     newHtml += `
@@ -38,6 +84,7 @@ function mount(ctx, html, attrs) {
     .map(({
       color, name, pid, pos_x, pos_y, powered, size, status_timer, status
     }) => `
+
       <div id="${pid}" style="
 
       position: absolute;
@@ -54,7 +101,7 @@ function mount(ctx, html, attrs) {
       font-size: ${2 * (size / 3)}px;
 
       ${
-        status == ":digesting" && status_timer % 2 == 0 ? 
+        status == "digesting" && status_timer % 2 == 0 ? 
         `
         box-shadow:
         0 0 ${size / 2}px ${size / 3}px #fff,
@@ -64,14 +111,14 @@ function mount(ctx, html, attrs) {
         : ""
       }
       ${
-        status == ":fleeing" ? 
+        status == "fleeing" ? 
         `
         border: 2px solid grey;
         `
         : ""
       }
       ${
-        powered > 0 ? 
+        status != "digesting" && powered > 0 ? 
         `
         box-shadow:
         0 0 ${size / 5}px ${size / 6}px #fff,
@@ -80,6 +127,7 @@ function mount(ctx, html, attrs) {
         `
         : ""
       }
+
       ">
         <span style="position: relative; bottom: -${size}px">${name}</span>
       </div>

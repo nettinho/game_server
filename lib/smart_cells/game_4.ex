@@ -1,7 +1,7 @@
-defmodule SmartCells.Game1 do
+defmodule SmartCells.Game4 do
   use Kino.JS
   use Kino.JS.Live
-  use Kino.SmartCell, name: "Game1"
+  use Kino.SmartCell, name: "Game4"
 
   @impl true
   def init(_attrs, ctx) do
@@ -23,9 +23,24 @@ defmodule SmartCells.Game1 do
     quote do
       {:ok, server} =
         LocalGameServer.start_link(%{
-          initial_fruit: {600, 125, 20},
+          initial_fruits: [
+            {500, 125, 20},
+            {300, 125, 20, :power_up}
+          ],
+          initial_enemies: [
+            {"enemy", %{pos_x: 600, pos_y: 200, size: 20, score: 5000}}
+          ],
+          powered_ticks_per_fruit_size: 50,
+          max_powered: 10000,
+          powered_velocity_bonus: 0,
           fruit_generated_probability: 0,
-          success_func: fn %{fruits: fruits} -> Enum.empty?(fruits) end
+          success_func: fn %{players: players} ->
+            {_, %{score: score, status: status}} =
+              players
+              |> Enum.find(fn {_, %{pid: pid}} -> is_nil(pid) end)
+
+            score < 5000 and status == :idle
+          end
         })
 
       SmartCells.KinoGame.new(server)
